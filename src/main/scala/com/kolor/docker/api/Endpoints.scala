@@ -25,15 +25,12 @@ object Endpoints {
     baseUri / "auth"
   }
   
-  def dockerBuild(tag: String, verbose: Boolean = false, noCache: Boolean = false)(implicit docker: DockerClient): Uri = {
-    (baseUri / "build") ? ("q" -> verbose) & ("nocache" -> noCache) & ("t" -> tag)
+  def dockerBuild(tag: String, verbose: Boolean = false, noCache: Boolean = false, remove: Boolean = false, forceRemove: Boolean = false)(implicit docker: DockerClient): Uri = {
+    (baseUri / "build") ? ("q" -> verbose) & ("nocache" -> noCache) & ("t" -> tag) & ("rm" -> remove) & ("forcerm" -> forceRemove)
   }
   
-  def dockerEvents(since: Option[Long] = None)(implicit docker: DockerClient): Uri = {
-    since match {
-      case Some(l) if (l > 0) => (baseUri / "events") ? ("since" -> since)
-      case _ => (baseUri / "events")
-    }
+  def dockerEvents(since: Option[Long] = None, until: Option[Long] = None)(implicit docker: DockerClient): Uri = {
+    (baseUri / "events") ? ("since" -> since) ? ("until" -> until)
   }
   
   /**

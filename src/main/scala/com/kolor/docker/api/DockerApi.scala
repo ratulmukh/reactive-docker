@@ -121,8 +121,8 @@ val req = solr / "update" / "json" << a <<? params <:< headers
    * retrieve list of docker events since given timestamp
    * timestamp defaults to past 10 seconds
    */
-  def dockerEvents(since: Option[DateTime] = None)(implicit docker: DockerClient, fmt: Format[DockerStatusMessage], errorFmt: Format[DockerErrorInfo], progressFmt: Format[DockerProgressInfo]): Future[List[Either[DockerErrorInfo, DockerStatusMessage]]] = {
-    val req = url(Endpoints.dockerEvents(Some(since.map(_.getMillis()).getOrElse(DateTime.now().getMillis() - (100*10)))).toString).GET
+  def dockerEvents(since: Option[DateTime] = None, until: Option[DateTime] = None)(implicit docker: DockerClient, fmt: Format[DockerStatusMessage], errorFmt: Format[DockerErrorInfo], progressFmt: Format[DockerProgressInfo]): Future[List[Either[DockerErrorInfo, DockerStatusMessage]]] = {
+    val req = url(Endpoints.dockerEvents(Some(since.map(_.getMillis()).getOrElse(DateTime.now().getMillis() - (100*10))), if(until.isDefined) Some(until.get.getMillis()) else None).toString).GET
     recoverDockerAwareRequest(docker.dockerRequestIteratee(req)(_ => DockerIteratee.statusStream)).flatMap(_.run)
   }
   
@@ -148,10 +148,10 @@ val req = solr / "update" / "json" << a <<? params <:< headers
    * build image from dockerfile
    * allows realtime processing of the response by given iteratee
    */
-  def dockerBuildIteratee[T](tarFile: java.io.File, tag: String, verbose: Boolean = false, nocache: Boolean = false)(consumer: Iteratee[Array[Byte], T])(implicit docker: DockerClient, auth: DockerAuth = DockerAnonymousAuth): Future[Iteratee[Array[Byte], T]] = {
+  def dockerBuildIteratee[T](tarFile: java.io.File, tag: String, verbose: Boolean = false, nocache: Boolean = false, remove: Boolean = false, forceRemove: Boolean = false)(consumer: Iteratee[Array[Byte], T])(implicit docker: DockerClient, auth: DockerAuth = DockerAnonymousAuth): Future[Iteratee[Array[Byte], T]] = {
     val req = auth match {
-    	case DockerAnonymousAuth => url(Endpoints.dockerBuild(tag, verbose, nocache).toString).POST
-    	case data => url(Endpoints.dockerBuild(tag, verbose, nocache).toString).POST <:< Map("X-Registry-Config" -> data.asBase64Encoded)
+    	case DockerAnonymousAuth => url(Endpoints.dockerBuild(tag, verbose, nocache, remove, forceRemove).toString).POST
+    	case data => url(Endpoints.dockerBuild(tag, verbose, nocache, remove, forceRemove).toString).POST <:< Map("X-Registry-Config" -> data.asBase64Encoded)
     }
     
     recoverDockerAwareRequest(docker.dockerRequestIteratee(req)(_ => consumer))
@@ -161,8 +161,8 @@ val req = solr / "update" / "json" << a <<? params <:< headers
    * build image ffrom dockerfile
    * collects and aggregates all docker messages into a list on completion
    */
-  def dockerBuild(tarFile: java.io.File, tag: String, verbose: Boolean = false, nocache: Boolean = false)(implicit docker: DockerClient, auth: DockerAuth = DockerAnonymousAuth): Future[List[Either[DockerErrorInfo, DockerStatusMessage]]] = {
-    dockerBuildIteratee(tarFile, tag, verbose, nocache)(DockerIteratee.statusStream).flatMap(_.run)
+  def dockerBuild(tarFile: java.io.File, tag: String, verbose: Boolean = false, nocache: Boolean = false, remove: Boolean = false, forceRemove: Boolean = false)(implicit docker: DockerClient, auth: DockerAuth = DockerAnonymousAuth): Future[List[Either[DockerErrorInfo, DockerStatusMessage]]] = {
+    dockerBuildIteratee(tarFile, tag, verbose, nocache, remove, forceRemove)(DockerIteratee.statusStream).flatMap(_.run)
   }
 }
 

@@ -151,7 +151,7 @@ object Formats {
       (__ \ "name").read[String] and
       (__ \ "description").readNullable[String] and
       (__ \ "is_official").read[Boolean] and
-      (__ \ "is_trusted").read[Boolean] and
+      (__ \ "is_automated").read[Boolean] and
       (__ \ "star_count").read[Int])(DockerImageSearchResult.apply _),
     Json.writes[DockerImageSearchResult])
 
